@@ -1,0 +1,12 @@
+[package]
+name = "iroh-p2p-node"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+base64 = "0.22.1"
+bitcode = { version = "0.6.7", features = ["serde"] }
+iroh = "0.94.0"
+iroh-quinn-proto = "0.13.0"
+tokio = "1.48.0"
