@@ -36,11 +36,19 @@ async fn main() -> Result<()> {
     println!("{:?}", ep.addr());
     // println!("{}", ep.id().to_z32());
     println!("{}", addr_str);
+    let mut cur_addr = ep.addr();
     while let Some(incoming) = ep.accept().await {
+        let mut watcher = ep.watch_addr();
+        let c_a = cur_addr.clone();
         tokio::spawn(async move {
             let (conn, za) = incoming.accept()?.into_0rtt().unwrap();
             // let conn = incoming.await.context("connecting error")?;
             print!("{:?}", conn.remote_id());
+            let addr = watcher.get();
+            if addr != c_a {
+                // ep.network_change().await;
+                println!("network changed: {:?}", addr);
+            }
             let mut recv_stream = conn.accept_uni().await.unwrap();
             loop {
                 let mut buf = [0u8; 8];
@@ -80,13 +88,15 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let mut send_stream = conn.open_uni().await.context("unable to open uni")?;
     let mut seq = 0u64;
+    let mut msg = [0u8; 1000];
     loop {
+        msg[0..8].copy_from_slice(&seq.to_be_bytes());
         send_stream
             .write_all(&seq.to_be_bytes())
             .await
             .context("unable to write all")?;
         seq += 1;
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         let c_t = conn_type.get();
         println!("{}, {}ms", c_t, conn.rtt().as_millis());
     }
