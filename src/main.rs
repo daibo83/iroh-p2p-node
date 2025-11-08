@@ -23,8 +23,8 @@ async fn main() -> Result<()> {
         return connect(addr).await;
     }
     let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+        // RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+        RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
         // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
     ])))
     .alpns(vec![b"my-alpn".to_vec()])
@@ -66,8 +66,8 @@ async fn main() -> Result<()> {
 
 async fn connect(addr: EndpointAddr) -> Result<()> {
     let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+        // RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+        RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
         // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
     ])))
     .alpns(vec![b"my-alpn".to_vec()])
