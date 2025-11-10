@@ -23,11 +23,11 @@ async fn main() -> Result<()> {
         return connect(addr).await;
     }
     let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        // RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
         // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
     ])))
-    .alpns(vec![b"my-alpn".to_vec()])
+    .alpns(vec![b"ermis-call".to_vec()])
     .bind()
     .await?;
     ep.online().await;
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
         let mut watcher = ep.watch_addr();
         let c_a = cur_addr.clone();
         tokio::spawn(async move {
-            let (conn, za) = incoming.accept()?.into_0rtt().unwrap();
+            let (conn) = incoming.accept()?.await?;
             // let conn = incoming.await.context("connecting error")?;
             print!("{:?}", conn.remote_id());
             let addr = watcher.get();
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
                 // ep.network_change().await;
                 println!("network changed: {:?}", addr);
             }
-            let mut recv_stream = conn.accept_uni().await.unwrap();
+            let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
             loop {
                 let mut buf = [0u8; 8];
                 recv_stream
@@ -66,8 +66,8 @@ async fn main() -> Result<()> {
 
 async fn connect(addr: EndpointAddr) -> Result<()> {
     let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        // RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
         // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
     ])))
     .alpns(vec![b"my-alpn".to_vec()])
@@ -80,13 +80,13 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let conn = ep
         .connect_with_opts(
             addr.clone(),
-            b"my-alpn",
+            b"ermis-call",
             ConnectOptions::new().with_transport_config(Arc::new(transport_config)),
         )
         .await?
         .await?;
     let mut conn_type = ep.conn_type(addr.id).unwrap();
-    let mut send_stream = conn.open_uni().await.context("unable to open uni")?;
+    let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
     let mut seq = 0u64;
     let mut msg = [0u8; 1000];
     loop {
