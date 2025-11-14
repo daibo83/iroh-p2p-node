@@ -141,16 +141,15 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
 
         let mut send_stream = conn.open_uni().await.context("unable to open uni")?;
-        send_stream
-            .write_all(&msg)
-            .await
-            .context("unable to write all")
-            .unwrap();
-        send_stream
-            .flush()
-            .await
-            .context("unable to flush")
-            .unwrap();
+        for chunk in msg.chunks(500) {
+            send_stream
+                .write_all(chunk)
+                .await
+                .context("unable to write all")
+                .unwrap();
+            send_stream.flush().await.unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+        }
         send_stream
             .shutdown()
             .await
@@ -170,7 +169,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         // }
 
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
