@@ -134,7 +134,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         // let c_t = conn_type.get();
         msg[0..4].copy_from_slice(&seq.to_be_bytes());
-        let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16);
+        let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
         conn.send_datagram(Bytes::copy_from_slice(
             encoder.get_config().serialize().as_slice(),
         ))
