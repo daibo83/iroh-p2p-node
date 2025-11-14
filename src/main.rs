@@ -108,8 +108,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     ep.online().await;
     println!("{:?}", ep.addr());
     let mut transport_config = TransportConfig::default();
-    transport_config
-        .congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
+    transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
     let conn = ep
         .connect_with_opts(
             addr.clone(),
@@ -121,15 +120,16 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
     let mut seq = 0u32;
-    let mut msg = [0u8; 32004];
+    let mut msg = [0u8; 10004];
     loop {
-        msg[0..4].copy_from_slice(&32000u32.to_be_bytes());
+        msg[0..4].copy_from_slice(&10000u32.to_be_bytes());
         for chunk in msg.chunks(1000) {
             send_stream
                 .write_all(chunk)
                 .await
                 .context("unable to write all")
                 .unwrap();
+            send_stream.flush().await.unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
         // send_stream
