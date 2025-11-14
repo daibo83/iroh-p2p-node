@@ -120,10 +120,11 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         let c_t = conn_type.get();
         println!(
-            "{}, {}ms, {}",
+            "{}, {}ms, {}, {}",
             c_t,
             conn.rtt().as_millis(),
-            conn.stats().path.lost_packets as f64 / conn.stats().path.sent_packets as f64
+            conn.stats().path.lost_packets as f64 / conn.stats().path.sent_packets as f64,
+            conn.max_datagram_size().unwrap()
         );
     }
 }
