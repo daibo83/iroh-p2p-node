@@ -169,7 +169,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         // }
 
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(15)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
