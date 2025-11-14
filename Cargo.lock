@@ -1413,6 +1413,7 @@ dependencies = [
  "anyhow",
  "base64",
  "bitcode",
+ "bytes",
  "futures",
  "iroh",
  "iroh-quinn-proto",

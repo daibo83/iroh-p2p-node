@@ -1,12 +1,14 @@
-use std::{str::FromStr as _, sync::Arc};
+use std::{str::FromStr as _, sync::Arc, time::Instant};
 
 use anyhow::{Context as _, Ok, Result};
 use base64::{Engine, prelude::BASE64_STANDARD};
+use bytes::Bytes;
 use iroh::{
     EndpointAddr, RelayMap, RelayMode, RelayUrl, Watcher,
     endpoint::{Builder, ConnectOptions, TransportConfig},
 };
 use iroh_quinn_proto::congestion::BbrConfig;
+use tokio::io::AsyncWriteExt as _;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = std::env::args().collect::<Vec<_>>();
@@ -43,20 +45,31 @@ async fn main() -> Result<()> {
         tokio::spawn(async move {
             let (conn) = incoming.accept()?.await?;
             // let conn = incoming.await.context("connecting error")?;
-            print!("{:?}", conn.remote_id());
+            println!("{:?}", conn.remote_id());
             let addr = watcher.get();
             if addr != c_a {
                 // ep.network_change().await;
                 println!("network changed: {:?}", addr);
             }
-            let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
+            // let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
+            // println!("bidi accepted");
+            // let mut buf = [0u8; 80000];
+            // loop {
+            //     recv_stream.read_exact(&mut buf[0..4]).await?;
+            //     let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+            //     let n = recv_stream
+            //         .read_exact(&mut buf[4..len as usize + 4])
+            //         .await
+            //         .context("unable to read")?;
+            //     println!("{:?}, {:?}", len, Instant::now());
+            // }
             loop {
-                let mut buf = [0u8; 8];
-                recv_stream
-                    .read_exact(&mut buf)
-                    .await
-                    .context("unable to read")?;
-                println!("{:?}", u64::from_be_bytes(buf));
+                let dgram = conn.read_datagram().await?;
+                println!(
+                    "{}, {}",
+                    u32::from_be_bytes(dgram[0..4].try_into().unwrap()),
+                    dgram.len()
+                )
             }
             Ok(())
         });
@@ -87,17 +100,30 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         .await?;
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
-    let mut seq = 0u64;
-    let mut msg = [0u8; 1000];
+    let mut seq = 0u32;
+    let mut msg = [0u8; 1100];
     loop {
-        msg[0..8].copy_from_slice(&seq.to_be_bytes());
-        send_stream
-            .write_all(&seq.to_be_bytes())
-            .await
-            .context("unable to write all")?;
+        // msg[0..4].copy_from_slice(&1500u32.to_be_bytes());
+        // send_stream
+        //     .write_all(&msg[..1000])
+        //     .await
+        //     .context("unable to write all")
+        //     .unwrap();
+        // send_stream.write_all(&msg[1000..]).await.unwrap();
+        // send_stream.flush().await.unwrap();
+        // seq += 1;
+        // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        // let c_t = conn_type.get();
+        msg[0..4].copy_from_slice(&seq.to_be_bytes());
         seq += 1;
+        conn.send_datagram(Bytes::copy_from_slice(&msg)).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         let c_t = conn_type.get();
-        println!("{}, {}ms", c_t, conn.rtt().as_millis());
+        println!(
+            "{}, {}ms, {}",
+            c_t,
+            conn.rtt().as_millis(),
+            conn.stats().path.lost_packets as f64 / conn.stats().path.sent_packets as f64
+        );
     }
 }
