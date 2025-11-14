@@ -7,7 +7,7 @@ use iroh::{
     EndpointAddr, RelayMap, RelayMode, RelayUrl, Watcher,
     endpoint::{Builder, ConnectOptions, TransportConfig},
 };
-use iroh_quinn_proto::congestion::BbrConfig;
+use iroh_quinn_proto::congestion::{BbrConfig, CubicConfig};
 use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
 use tokio::io::AsyncWriteExt as _;
 #[tokio::main]
@@ -108,7 +108,8 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     ep.online().await;
     println!("{:?}", ep.addr());
     let mut transport_config = TransportConfig::default();
-    transport_config.congestion_controller_factory(std::sync::Arc::new(BbrConfig::default()));
+    transport_config
+        .congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
     let conn = ep
         .connect_with_opts(
             addr.clone(),
