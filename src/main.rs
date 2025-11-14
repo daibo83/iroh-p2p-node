@@ -54,31 +54,32 @@ async fn main() -> Result<()> {
             }
             loop {
                 let dgram = conn.read_datagram().await?;
-                if dgram.len() == 12 {
-                    let transmission_info =
-                        ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
-                    let mut decoder = Decoder::new(transmission_info);
-                    let mut received = 0;
-                    loop {
-                        let dgram = conn.read_datagram().await?;
-                        received += 1;
-                        let packet = EncodingPacket::deserialize(&dgram);
-                        if packet.payload_id().encoding_symbol_id() == 39 {
-                            println!("{}", packet.data().len());
-                            continue;
-                        }
-                        // println!("received: {}", packet.payload_id().encoding_symbol_id());
-                        decoder.add_new_packet(packet);
-                        if let Some(decoded) = decoder.get_result() {
-                            println!(
-                                "{}, {}",
-                                u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
-                                decoded.len()
-                            );
-                            break;
-                        }
-                    }
-                }
+                println!("dgram {:?}", Instant::now());
+                // if dgram.len() == 12 {
+                //     let transmission_info =
+                //         ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
+                //     let mut decoder = Decoder::new(transmission_info);
+                //     let mut received = 0;
+                //     loop {
+                //         let dgram = conn.read_datagram().await?;
+                //         received += 1;
+                //         let packet = EncodingPacket::deserialize(&dgram);
+                //         if packet.payload_id().encoding_symbol_id() == 39 {
+                //             println!("{}", packet.data().len());
+                //             continue;
+                //         }
+                //         println!("received: {}", packet.payload_id().encoding_symbol_id());
+                //         decoder.add_new_packet(packet);
+                //         if let Some(decoded) = decoder.get_result() {
+                //             println!(
+                //                 "{}, {}",
+                //                 u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
+                //                 decoded.len()
+                //             );
+                //             break;
+                //         }
+                //     }
+                // }
             }
             Ok(())
         });
@@ -125,6 +126,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             .iter()
             .map(|packet| packet.serialize())
         {
+            println!("{}", conn.datagram_send_buffer_space());
             conn.send_datagram(Bytes::from(packet));
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
