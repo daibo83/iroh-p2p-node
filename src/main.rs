@@ -125,17 +125,17 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     loop {
         msg[..4].copy_from_slice(&10000u32.to_be_bytes());
         for chunk in msg.chunks(1000) {
+            if conn.stats().path.lost_packets > cur_lost {
+                println!("Lost packets: {}", conn.stats().path.lost_packets);
+                cur_lost = conn.stats().path.lost_packets;
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
             send_stream
                 .write_all(chunk)
                 .await
                 .context("unable to write all")
                 .unwrap();
             send_stream.flush().await.unwrap();
-            if conn.stats().path.lost_packets > cur_lost {
-                println!("Lost packets: {}", conn.stats().path.lost_packets);
-                cur_lost = conn.stats().path.lost_packets;
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-            }
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
 
