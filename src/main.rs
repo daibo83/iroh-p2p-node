@@ -113,7 +113,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut lost_packets = 0;
     loop {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
-        let encoder = Encoder::with_defaults(&msg, 1000);
+        let encoder = Encoder::with_defaults(&msg, 500);
         conn.send_datagram(Bytes::copy_from_slice(
             encoder.get_config().serialize().as_slice(),
         ))
@@ -121,7 +121,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         let cur_lost = conn.stats().path.lost_packets - lost_packets;
         lost_packets = conn.stats().path.lost_packets;
         for packet in encoder
-            .get_encoded_packets(4)
+            .get_encoded_packets(2)
             .iter()
             .map(|packet| packet.serialize())
         {
