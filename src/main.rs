@@ -130,7 +130,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
                 .context("unable to write all")
                 .unwrap();
             send_stream.flush().await.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
 
         // let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
