@@ -128,7 +128,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             if conn.stats().path.lost_packets > cur_lost {
                 println!("Lost packets: {}", conn.stats().path.lost_packets);
                 cur_lost = conn.stats().path.lost_packets;
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
             send_stream
                 .write_all(chunk)
