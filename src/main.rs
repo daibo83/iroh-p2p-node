@@ -145,7 +145,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         ))
         .unwrap();
         for packet in encoder
-            .get_encoded_packets(1)
+            .get_encoded_packets(2)
             .iter()
             .map(|packet| packet.serialize())
         {
@@ -153,7 +153,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        // tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
