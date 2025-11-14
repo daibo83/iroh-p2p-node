@@ -130,6 +130,10 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
                 .context("unable to write all")
                 .unwrap();
             send_stream.flush().await.unwrap();
+            if conn.stats().path.lost_packets > 0 {
+                println!("Lost packets: {}", conn.stats().path.lost_packets);
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
 
