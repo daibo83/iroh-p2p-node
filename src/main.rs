@@ -124,7 +124,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut cur_lost = 0;
     loop {
         msg[..4].copy_from_slice(&10000u32.to_be_bytes());
-        for chunk in msg.chunks(1000) {
+        for chunk in msg.chunks(500) {
             if conn.stats().path.lost_packets > cur_lost {
                 println!("Lost packets: {}", conn.stats().path.lost_packets);
                 cur_lost = conn.stats().path.lost_packets;
