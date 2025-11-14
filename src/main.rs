@@ -127,6 +127,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         while sent < msg.len() {
             let n = send_stream.write(&msg[sent..]).await.unwrap();
             sent += n;
+            send_stream.flush().await.unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
         sent = 0;
