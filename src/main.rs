@@ -121,26 +121,16 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
     let mut seq = 0u32;
     let mut msg = [0u8; 10004];
-    let mut sent = 0;
     loop {
-        msg[0..4].copy_from_slice(&10000u32.to_be_bytes());
-        while sent < msg.len() {
-            let n = send_stream.write(&msg[sent..]).await.unwrap();
-            sent += n;
+        for chunk in msg.chunks(1000) {
+            send_stream
+                .write_all(chunk)
+                .await
+                .context("unable to write all")
+                .unwrap();
             send_stream.flush().await.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         }
-        sent = 0;
-
-        // for chunk in msg.chunks(1000) {
-        //     send_stream
-        //         .write_all(chunk)
-        //         .await
-        //         .context("unable to write all")
-        //         .unwrap();
-        //     send_stream.flush().await.unwrap();
-        //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-        // }
 
         // let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
         // conn.send_datagram(Bytes::copy_from_slice(
