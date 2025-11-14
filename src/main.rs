@@ -58,10 +58,16 @@ async fn main() -> Result<()> {
                     let transmission_info =
                         ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
                     let mut decoder = Decoder::new(transmission_info);
+                    let mut received = 0;
                     loop {
                         let dgram = conn.read_datagram().await?;
+                        received += 1;
                         let packet = EncodingPacket::deserialize(&dgram);
-                        println!("received: {}", packet.payload_id().encoding_symbol_id());
+                        if packet.payload_id().encoding_symbol_id() == 39 {
+                            println!("{}", packet.data().len());
+                            continue;
+                        }
+                        // println!("received: {}", packet.payload_id().encoding_symbol_id());
                         decoder.add_new_packet(packet);
                         if let Some(decoded) = decoder.get_result() {
                             println!(
@@ -107,7 +113,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut lost_packets = 0;
     loop {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
-        let encoder = Encoder::with_defaults(&msg, 500);
+        let encoder = Encoder::with_defaults(&msg, 1000);
         conn.send_datagram(Bytes::copy_from_slice(
             encoder.get_config().serialize().as_slice(),
         ))
