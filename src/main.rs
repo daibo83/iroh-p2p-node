@@ -8,6 +8,7 @@ use iroh::{
     endpoint::{Builder, ConnectOptions, TransportConfig},
 };
 use iroh_quinn_proto::congestion::BbrConfig;
+use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
 use tokio::io::AsyncWriteExt as _;
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -65,11 +66,29 @@ async fn main() -> Result<()> {
             // }
             loop {
                 let dgram = conn.read_datagram().await?;
-                println!(
-                    "{}, {}",
-                    u32::from_be_bytes(dgram[0..4].try_into().unwrap()),
-                    dgram.len()
-                )
+                if dgram.len() == 12 {
+                    let transmission_info =
+                        ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
+                    let mut decoder = Decoder::new(transmission_info);
+                    loop {
+                        let dgram = conn.read_datagram().await?;
+                        let packet = EncodingPacket::deserialize(&dgram);
+                        let decoded = decoder.decode(packet);
+                        if let Some(decoded) = decoded {
+                            println!(
+                                "{}, {}",
+                                u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
+                                decoded.len()
+                            );
+                            break;
+                        }
+                    }
+                }
+                // println!(
+                //     "{}, {}",
+                //     u32::from_be_bytes(dgram[0..4].try_into().unwrap()),
+                //     dgram.len()
+                // )
             }
             Ok(())
         });
@@ -101,7 +120,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
     let mut seq = 0u32;
-    let mut msg = [0u8; 1100];
+    let mut msg = [0u8; 32000];
     loop {
         // msg[0..4].copy_from_slice(&1500u32.to_be_bytes());
         // send_stream
@@ -115,8 +134,20 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         // let c_t = conn_type.get();
         msg[0..4].copy_from_slice(&seq.to_be_bytes());
-        seq += 1;
-        conn.send_datagram(Bytes::copy_from_slice(&msg)).unwrap();
+        let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16);
+        conn.send_datagram(Bytes::copy_from_slice(
+            encoder.get_config().serialize().as_slice(),
+        ))
+        .unwrap();
+        for packet in encoder
+            .get_encoded_packets(10)
+            .iter()
+            .map(|packet| packet.serialize())
+        {
+            conn.send_datagram(Bytes::from(packet)).unwrap();
+        }
+
+        // conn.send_datagram(Bytes::copy_from_slice(&msg)).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         let c_t = conn_type.get();
         println!(
@@ -126,5 +157,6 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             conn.stats().path.lost_packets as f64 / conn.stats().path.sent_packets as f64,
             conn.max_datagram_size().unwrap()
         );
+        seq += 1;
     }
 }

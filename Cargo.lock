@@ -1417,6 +1417,7 @@ dependencies = [
  "futures",
  "iroh",
  "iroh-quinn-proto",
+ "raptorq",
  "tokio",
 ]
 
@@ -2281,6 +2282,12 @@ checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.4",
 ]
+
+[[package]]
+name = "raptorq"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90b1b1fad69672f0b901b5004863ea4307f03d168a3db5f2bcba4d3dfed88e97"
 
 [[package]]
 name = "redox_syscall"
