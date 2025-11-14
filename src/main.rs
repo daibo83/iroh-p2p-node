@@ -122,7 +122,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut lost_packets = 0;
     loop {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
-        let encoder = Encoder::with_defaults(&msg, 500);
+        let encoder = Encoder::with_defaults(&msg, 1000);
         conn.send_datagram(Bytes::copy_from_slice(
             encoder.get_config().serialize().as_slice(),
         ))
@@ -136,7 +136,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         {
             println!("{}", conn.datagram_send_buffer_space());
             conn.send_datagram(Bytes::from(packet));
-            tokio::time::sleep(std::time::Duration::from_micros(500)).await;
+            tokio::time::sleep(std::time::Duration::from_micros(5090)).await;
         }
 
         // tokio::time::sleep(std::time::Duration::from_millis(15)).await;
