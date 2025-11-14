@@ -150,6 +150,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             send_stream.flush().await.unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
+        send_stream.finish().context("unable to finish")?;
         send_stream
             .shutdown()
             .await
