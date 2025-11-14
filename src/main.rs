@@ -61,8 +61,9 @@ async fn main() -> Result<()> {
                     loop {
                         let dgram = conn.read_datagram().await?;
                         let packet = EncodingPacket::deserialize(&dgram);
-                        let decoded = decoder.decode(packet);
-                        if let Some(decoded) = decoded {
+                        println!("received: {}", packet.payload_id().encoding_symbol_id());
+                        decoder.add_new_packet(packet);
+                        if let Some(decoded) = decoder.get_result() {
                             println!(
                                 "{}, {}",
                                 u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
@@ -122,7 +123,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+        // tokio::time::sleep(std::time::Duration::from_millis(15)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
