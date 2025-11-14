@@ -1,10 +1,14 @@
-use std::{str::FromStr as _, sync::Arc, time::Instant};
+use std::{
+    str::FromStr as _,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Context as _, Ok, Result};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use bytes::Bytes;
 use iroh::{
-    EndpointAddr, RelayMap, RelayMode, RelayUrl, Watcher,
+    EndpointAddr, RelayMap, RelayMode, RelayUrl, SecretKey, Watcher,
     endpoint::{Builder, ConnectOptions, TransportConfig},
 };
 use iroh_quinn_proto::congestion::{BbrConfig, CubicConfig};
@@ -25,11 +29,15 @@ async fn main() -> Result<()> {
         println!("connecting to peer {:?}", addr);
         return connect(addr).await;
     }
+    let mut transport_config = TransportConfig::default();
+    transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
+    transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
     let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
         RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
         // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
         // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
     ])))
+    .transport_config(transport_config)
     .alpns(vec![b"ermis-call".to_vec()])
     .bind()
     .await?;
@@ -53,7 +61,7 @@ async fn main() -> Result<()> {
                 println!("network changed: {:?}", addr);
             }
             loop {
-                let dgram = conn.read_datagram().await?;
+                let dgram = conn.read_datagram().await.unwrap();
                 if dgram.len() == 12 {
                     let transmission_info =
                         ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
@@ -99,6 +107,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     println!("{:?}", ep.addr());
     let mut transport_config = TransportConfig::default();
     transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
+    transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
     let conn = ep
         .connect_with_opts(
             addr.clone(),
@@ -127,7 +136,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         {
             println!("{}", conn.datagram_send_buffer_space());
             conn.send_datagram(Bytes::from(packet));
-            if conn.datagram_send_buffer_space() < 500000 {
+            if conn.datagram_send_buffer_space() < 900000 {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
