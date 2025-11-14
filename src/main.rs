@@ -52,44 +52,44 @@ async fn main() -> Result<()> {
                 // ep.network_change().await;
                 println!("network changed: {:?}", addr);
             }
-            // let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
-            // println!("bidi accepted");
-            // let mut buf = [0u8; 80000];
-            // loop {
-            //     recv_stream.read_exact(&mut buf[0..4]).await?;
-            //     let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
-            //     let n = recv_stream
-            //         .read_exact(&mut buf[4..len as usize + 4])
-            //         .await
-            //         .context("unable to read")?;
-            //     println!("{:?}, {:?}", len, Instant::now());
-            // }
+            let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
+            println!("bidi accepted");
+            let mut buf = [0u8; 80000];
             loop {
-                let dgram = conn.read_datagram().await?;
-                if dgram.len() == 12 {
-                    let transmission_info =
-                        ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
-                    let mut decoder = Decoder::new(transmission_info);
-                    loop {
-                        let dgram = conn.read_datagram().await?;
-                        let packet = EncodingPacket::deserialize(&dgram);
-                        let decoded = decoder.decode(packet);
-                        if let Some(decoded) = decoded {
-                            println!(
-                                "{}, {}",
-                                u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
-                                decoded.len()
-                            );
-                            break;
-                        }
-                    }
-                }
-                // println!(
-                //     "{}, {}",
-                //     u32::from_be_bytes(dgram[0..4].try_into().unwrap()),
-                //     dgram.len()
-                // )
+                recv_stream.read_exact(&mut buf[0..4]).await?;
+                let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+                let n = recv_stream
+                    .read_exact(&mut buf[4..len as usize + 4])
+                    .await
+                    .context("unable to read")?;
+                println!("{:?}, {:?}", len, Instant::now());
             }
+            // loop {
+            //     let dgram = conn.read_datagram().await?;
+            //     if dgram.len() == 12 {
+            //         let transmission_info =
+            //             ObjectTransmissionInformation::deserialize(dgram[..12].try_into().unwrap());
+            //         let mut decoder = Decoder::new(transmission_info);
+            //         loop {
+            //             let dgram = conn.read_datagram().await?;
+            //             let packet = EncodingPacket::deserialize(&dgram);
+            //             let decoded = decoder.decode(packet);
+            //             if let Some(decoded) = decoded {
+            //                 println!(
+            //                     "{}, {}",
+            //                     u32::from_be_bytes(decoded[0..4].try_into().unwrap()),
+            //                     decoded.len()
+            //                 );
+            //                 break;
+            //             }
+            //         }
+            //     }
+            //     // println!(
+            //     //     "{}, {}",
+            //     //     u32::from_be_bytes(dgram[0..4].try_into().unwrap()),
+            //     //     dgram.len()
+            //     // )
+            // }
             Ok(())
         });
     }
@@ -120,33 +120,39 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let (mut send_stream, mut recv_stream) = conn.open_bi().await.context("unable to open uni")?;
     let mut seq = 0u32;
-    let mut msg = [0u8; 32000];
+    let mut msg = [0u8; 32004];
     loop {
-        // msg[0..4].copy_from_slice(&1500u32.to_be_bytes());
+        msg[0..4].copy_from_slice(&32000u32.to_be_bytes());
+        for chunk in msg.chunks(1000) {
+            send_stream
+                .write_all(chunk)
+                .await
+                .context("unable to write all")
+                .unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
         // send_stream
         //     .write_all(&msg[..1000])
         //     .await
         //     .context("unable to write all")
         //     .unwrap();
+        // tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         // send_stream.write_all(&msg[1000..]).await.unwrap();
         // send_stream.flush().await.unwrap();
-        // seq += 1;
-        // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-        // let c_t = conn_type.get();
-        msg[0..4].copy_from_slice(&seq.to_be_bytes());
-        let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
-        conn.send_datagram(Bytes::copy_from_slice(
-            encoder.get_config().serialize().as_slice(),
-        ))
-        .unwrap();
-        for packet in encoder
-            .get_encoded_packets(1)
-            .iter()
-            .map(|packet| packet.serialize())
-        {
-            conn.send_datagram(Bytes::from(packet)).unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-        }
+
+        // let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
+        // conn.send_datagram(Bytes::copy_from_slice(
+        //     encoder.get_config().serialize().as_slice(),
+        // ))
+        // .unwrap();
+        // for packet in encoder
+        //     .get_encoded_packets(1)
+        //     .iter()
+        //     .map(|packet| packet.serialize())
+        // {
+        //     conn.send_datagram(Bytes::from(packet)).unwrap();
+        //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        // }
 
         // conn.send_datagram(Bytes::copy_from_slice(&msg)).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
