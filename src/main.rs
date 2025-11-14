@@ -149,7 +149,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             .iter()
             .map(|packet| packet.serialize())
         {
-            conn.send_datagram(Bytes::from(packet)).unwrap();
+            conn.send_datagram(Bytes::from(packet));
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
 
