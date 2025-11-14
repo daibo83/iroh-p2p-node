@@ -122,6 +122,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut seq = 0u32;
     let mut msg = [0u8; 10004];
     loop {
+        msg[..4].copy_from_slice(&10000u32.to_be_bytes());
         for chunk in msg.chunks(1000) {
             send_stream
                 .write_all(chunk)
