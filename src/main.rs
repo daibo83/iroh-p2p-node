@@ -151,11 +151,6 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
         send_stream.finish().context("unable to finish")?;
-        send_stream
-            .shutdown()
-            .await
-            .context("unable to shutdown")
-            .unwrap();
         // let encoder = Encoder::with_defaults(&msg, conn.max_datagram_size().unwrap() as u16 - 100);
         // conn.send_datagram(Bytes::copy_from_slice(
         //     encoder.get_config().serialize().as_slice(),
