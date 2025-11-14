@@ -145,7 +145,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         ))
         .unwrap();
         for packet in encoder
-            .get_encoded_packets(2)
+            .get_encoded_packets(5)
             .iter()
             .map(|packet| packet.serialize())
         {
