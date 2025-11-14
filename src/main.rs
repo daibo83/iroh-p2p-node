@@ -52,24 +52,6 @@ async fn main() -> Result<()> {
                 // ep.network_change().await;
                 println!("network changed: {:?}", addr);
             }
-            // let (mut send_stream, mut recv_stream) = conn.accept_bi().await.unwrap();
-            // loop {
-            //     let mut recv_stream = conn.accept_uni().await?;
-            //     let bytes = recv_stream.read_to_end(usize::MAX).await?;
-            //     let seq = u32::from_be_bytes(bytes[0..4].try_into().unwrap());
-            //     println!("received {} {}", seq, bytes.len());
-            // }
-            println!("bidi accepted");
-            // let mut buf = [0u8; 80000];
-            // loop {
-            //     recv_stream.read_exact(&mut buf[0..4]).await?;
-            //     let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
-            //     let n = recv_stream
-            //         .read_exact(&mut buf[4..len as usize + 4])
-            //         .await
-            //         .context("unable to read")?;
-            //     println!("{:?}, {:?}", len, Instant::now());
-            // }
             loop {
                 let dgram = conn.read_datagram().await?;
                 if dgram.len() == 12 {
@@ -121,41 +103,16 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
     let mut conn_type = ep.conn_type(addr.id).unwrap();
     let mut seq = 0u32;
     let mut msg = [0u8; 10004];
-    let mut cur_lost = 0;
+    let mut lost_packets = 0;
     loop {
-        // msg[..4].copy_from_slice(&10000u32.to_be_bytes());
-        // for chunk in msg.chunks(500) {
-        //     if conn.stats().path.lost_packets > cur_lost {
-        //         println!("Lost packets: {}", conn.stats().path.lost_packets);
-        //         cur_lost = conn.stats().path.lost_packets;
-        //         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        //     }
-        //     send_stream
-        //         .write_all(chunk)
-        //         .await
-        //         .context("unable to write all")
-        //         .unwrap();
-        //     send_stream.flush().await.unwrap();
-        //     tokio::time::sleep(std::time::Duration::from_millis(2)).await;
-        // }
         msg[..4].copy_from_slice(&seq.to_be_bytes());
-
-        // let mut send_stream = conn.open_uni().await.context("unable to open uni")?;
-        // for chunk in msg.chunks(500) {
-        //     send_stream
-        //         .write_all(chunk)
-        //         .await
-        //         .context("unable to write all")
-        //         .unwrap();
-        //     send_stream.flush().await.unwrap();
-        //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-        // }
-        // send_stream.finish().context("unable to finish")?;
         let encoder = Encoder::with_defaults(&msg, 500);
         conn.send_datagram(Bytes::copy_from_slice(
             encoder.get_config().serialize().as_slice(),
         ))
         .unwrap();
+        let cur_lost = conn.stats().path.lost_packets - lost_packets;
+        lost_packets = conn.stats().path.lost_packets;
         for packet in encoder
             .get_encoded_packets(4)
             .iter()
@@ -171,7 +128,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
             "{}, {}ms, {}, {}",
             c_t,
             conn.rtt().as_millis(),
-            conn.stats().path.lost_packets as f64 / conn.stats().path.sent_packets as f64,
+            cur_lost,
             conn.max_datagram_size().unwrap()
         );
         seq += 1;
