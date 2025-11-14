@@ -149,7 +149,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         }
 
         // conn.send_datagram(Bytes::copy_from_slice(&msg)).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
