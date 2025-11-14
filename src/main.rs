@@ -148,7 +148,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
                 .context("unable to write all")
                 .unwrap();
             send_stream.flush().await.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
         send_stream
             .shutdown()
@@ -169,7 +169,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         //     tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         // }
 
-        tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+        // tokio::time::sleep(std::time::Duration::from_millis(15)).await;
         let c_t = conn_type.get();
         println!(
             "{}, {}ms, {}, {}",
