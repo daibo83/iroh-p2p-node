@@ -121,7 +121,7 @@ async fn connect(addr: NodeAddr) -> Result<()> {
     // ep.online().await;
     println!("{:?}", ep.node_addr().await.unwrap());
     let mut transport_config = TransportConfig::default();
-    transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
+    transport_config.congestion_controller_factory(std::sync::Arc::new(BbrConfig::default()));
     transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
     let conn = ep
         .connect_with_opts(
