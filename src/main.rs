@@ -8,8 +8,9 @@ use anyhow::{Context as _, Ok, Result};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use bytes::Bytes;
 use iroh::{
-    EndpointAddr, RelayMap, RelayMode, RelayUrl, SecretKey, Watcher,
+    Endpoint, NodeAddr, RelayMap, RelayMode, RelayUrl, SecretKey,
     endpoint::{Builder, ConnectOptions, TransportConfig},
+    watchable::Watcher,
 };
 use iroh_quinn_proto::congestion::{BbrConfig, CubicConfig};
 use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
@@ -25,41 +26,41 @@ async fn main() -> Result<()> {
         // let pkey = PublicKey::from_z32(&args[2])?;
         // let addr = EndpointAddr::new(pkey);
         let addr_bytes = BASE64_STANDARD.decode(&args[2])?;
-        let addr: EndpointAddr = bitcode::deserialize(&addr_bytes)?;
+        let addr: NodeAddr = bitcode::deserialize(&addr_bytes)?;
         println!("connecting to peer {:?}", addr);
         return connect(addr).await;
     }
     let mut transport_config = TransportConfig::default();
     transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
     transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
-    let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
-        // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
-    ])))
-    .transport_config(transport_config)
-    .alpns(vec![b"ermis-call".to_vec()])
-    .bind()
-    .await?;
-    ep.online().await;
-    let addr_bytes = bitcode::serialize(&ep.addr()).unwrap();
+    let ep = Endpoint::builder()
+        .relay_mode(RelayMode::Custom(RelayMap::from_iter(vec![
+            RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+            // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+            // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
+        ])))
+        .transport_config(transport_config)
+        .alpns(vec![b"ermis-call".to_vec()])
+        .bind()
+        .await?;
+    // ep.online().await;
+    let addr_bytes = bitcode::serialize(&ep.node_addr().await.unwrap()).unwrap();
     let addr_str = base64::prelude::BASE64_STANDARD.encode(addr_bytes);
-    println!("{:?}", ep.addr());
+    println!("{:?}", ep.node_addr().await.unwrap());
     // println!("{}", ep.id().to_z32());
     println!("{}", addr_str);
-    let mut cur_addr = ep.addr();
+    let mut cur_addr = ep.node_addr().await.unwrap();
     while let Some(incoming) = ep.accept().await {
-        let mut watcher = ep.watch_addr();
+        // let mut watcher = ep.watch_addr();
         let c_a = cur_addr.clone();
         tokio::spawn(async move {
             let conn = incoming.accept()?.await?;
             // let conn = incoming.await.context("connecting error")?;
-            println!("{:?}", conn.remote_id());
-            let addr = watcher.get();
-            if addr != c_a {
-                // ep.network_change().await;
-                println!("network changed: {:?}", addr);
-            }
+            // println!("{:?}", conn.remote_id());
+            // let addr = watcher.get();
+            // if addr != c_a {
+            //     println!("network changed: {:?}", addr);
+            // }
             loop {
                 let dgram = conn.read_datagram().await.unwrap();
                 if dgram.len() == 12 {
@@ -94,17 +95,18 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn connect(addr: EndpointAddr) -> Result<()> {
-    let ep = Builder::empty(RelayMode::Custom(RelayMap::from_iter(vec![
-        RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
-        // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
-        // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
-    ])))
-    .alpns(vec![b"my-alpn".to_vec()])
-    .bind()
-    .await?;
-    ep.online().await;
-    println!("{:?}", ep.addr());
+async fn connect(addr: NodeAddr) -> Result<()> {
+    let ep = Endpoint::builder()
+        .relay_mode(RelayMode::Custom(RelayMap::from_iter(vec![
+            RelayUrl::from_str("https://test-iroh.ermis.network.:8443").unwrap(),
+            // RelayUrl::from_str("https://aps1-1.relay.n0.iroh-canary.iroh.link.").unwrap(),
+            // RelayUrl::from_str("https://daibo.ermis.network.").unwrap(),
+        ])))
+        .alpns(vec![b"my-alpn".to_vec()])
+        .bind()
+        .await?;
+    // ep.online().await;
+    println!("{:?}", ep.node_addr().await.unwrap());
     let mut transport_config = TransportConfig::default();
     transport_config.congestion_controller_factory(std::sync::Arc::new(CubicConfig::default()));
     transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
@@ -116,7 +118,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         )
         .await?
         .await?;
-    let mut conn_type = ep.conn_type(addr.id).unwrap();
+    let mut conn_type = ep.conn_type(addr.node_id).unwrap();
     let mut seq = 0u32;
     let mut msg = [0u8; 10004];
     let mut lost_packets = 0;
@@ -140,7 +142,7 @@ async fn connect(addr: EndpointAddr) -> Result<()> {
         }
 
         // tokio::time::sleep(std::time::Duration::from_millis(15)).await;
-        let c_t = conn_type.get();
+        let c_t = conn_type.get().unwrap();
         println!(
             "{}, {}ms, {}, {}",
             c_t,

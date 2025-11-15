@@ -9,7 +9,7 @@ base64 = "0.22.1"
 bitcode = { version = "0.6.7", features = ["serde"] }
 bytes = "1.10.1"
 futures = "0.3.31"
-iroh = "0.95"
+iroh = "0.35"
 iroh-quinn-proto = "0.13.0"
 raptorq = "2.0.0"
 tokio = "1.48.0"
