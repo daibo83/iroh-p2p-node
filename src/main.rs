@@ -109,6 +109,7 @@ async fn connect(addr: NodeAddr) -> Result<()> {
         let direct_addresses = ep.direct_addresses().get().unwrap().unwrap();
         if cur_direct_addresses != direct_addresses {
             cur_direct_addresses = direct_addresses;
+            ep.network_change().await;
             println!("Direct addresses changed: {:?}", cur_direct_addresses);
         }
         if now.elapsed().as_millis() >= 1000 {
