@@ -99,24 +99,29 @@ async fn connect(addr: NodeAddr) -> Result<()> {
     let mut msg = [0u8; 10004];
     let mut lost_packets = 0;
     let mut now = Instant::now();
+    let mut cur_direct_addresses = ep.direct_addresses().get().unwrap().unwrap();
     loop {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
         framed_write.send(Bytes::copy_from_slice(&msg)).await?;
         let cur_lost = conn.stats().path.lost_packets - lost_packets;
         lost_packets = conn.stats().path.lost_packets;
         let c_t = conn_type.get().unwrap();
-        // if now.elapsed().as_millis() >= 1000 {
-        println!(
-            "{}, {}ms, {}, {}, {:?}",
-            c_t,
-            conn.rtt().as_millis(),
-            cur_lost,
-            conn.max_datagram_size().unwrap(),
-            ep.direct_addresses().get().unwrap()
-        );
-        now = Instant::now();
-        // }
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        let direct_addresses = ep.direct_addresses().get().unwrap().unwrap();
+        if cur_direct_addresses != direct_addresses {
+            cur_direct_addresses = direct_addresses;
+            println!("Direct addresses changed: {:?}", cur_direct_addresses);
+        }
+        if now.elapsed().as_millis() >= 1000 {
+            println!(
+                "{}, {}ms, {}, {}",
+                c_t,
+                conn.rtt().as_millis(),
+                cur_lost,
+                conn.max_datagram_size().unwrap(),
+            );
+            now = Instant::now();
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         seq += 1;
     }
 }
