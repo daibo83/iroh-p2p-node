@@ -1,4 +1,8 @@
-use std::{str::FromStr as _, sync::Arc, time::Duration};
+use std::{
+    str::FromStr as _,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::Result;
 use base64::{Engine, prelude::BASE64_STANDARD};
@@ -94,13 +98,14 @@ async fn connect(addr: NodeAddr) -> Result<()> {
     let mut seq = 0u32;
     let mut msg = [0u8; 10004];
     let mut lost_packets = 0;
+    let mut now = Instant::now();
     loop {
         msg[..4].copy_from_slice(&seq.to_be_bytes());
         framed_write.send(Bytes::copy_from_slice(&msg)).await?;
         let cur_lost = conn.stats().path.lost_packets - lost_packets;
         lost_packets = conn.stats().path.lost_packets;
         let c_t = conn_type.get().unwrap();
-        if seq % 100 == 0 {
+        if now.elapsed().as_millis() == 1000 {
             println!(
                 "{}, {}ms, {}, {}, {:?}",
                 c_t,
@@ -109,6 +114,7 @@ async fn connect(addr: NodeAddr) -> Result<()> {
                 conn.max_datagram_size().unwrap(),
                 ep.direct_addresses().get().unwrap()
             );
+            now = Instant::now();
         }
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         seq += 1;
