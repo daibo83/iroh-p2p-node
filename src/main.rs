@@ -105,18 +105,18 @@ async fn connect(addr: NodeAddr) -> Result<()> {
         let cur_lost = conn.stats().path.lost_packets - lost_packets;
         lost_packets = conn.stats().path.lost_packets;
         let c_t = conn_type.get().unwrap();
-        if now.elapsed().as_millis() == 1000 {
-            println!(
-                "{}, {}ms, {}, {}, {:?}",
-                c_t,
-                conn.rtt().as_millis(),
-                cur_lost,
-                conn.max_datagram_size().unwrap(),
-                ep.direct_addresses().get().unwrap()
-            );
-            now = Instant::now();
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        // if now.elapsed().as_millis() >= 1000 {
+        println!(
+            "{}, {}ms, {}, {}, {:?}",
+            c_t,
+            conn.rtt().as_millis(),
+            cur_lost,
+            conn.max_datagram_size().unwrap(),
+            ep.direct_addresses().get().unwrap()
+        );
+        now = Instant::now();
+        // }
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         seq += 1;
     }
 }
