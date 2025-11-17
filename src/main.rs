@@ -107,7 +107,7 @@ async fn connect(addr: NodeAddr) -> Result<()> {
                 conn.rtt().as_millis(),
                 cur_lost,
                 conn.max_datagram_size().unwrap(),
-                ep.node_addr().await.unwrap().direct_addresses
+                ep.direct_addresses()
             );
         }
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
